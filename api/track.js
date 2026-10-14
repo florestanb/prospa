@@ -1,7 +1,7 @@
 // Enregistre une action d'un visiteur
 const { redis } = require('./_redis');
 
-const TYPES = ['visit', 'queue_done', 'ticket', 'book', 'error', 'leave'];
+const TYPES = ['visit', 'queue_done', 'ticket', 'book', 'error', 'leave', 'sound'];
 const MAX = 10000; // nombre d'événements gardés
 
 module.exports = async (req, res) => {

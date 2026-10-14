@@ -51,6 +51,15 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 .p-book{background:var(--warnbg);color:var(--warn)}
 .p-error{background:var(--badbg);color:var(--bad)}
 .p-leave{background:var(--soft);color:var(--mute)}
+.p-sound{background:#F3E8FF;color:#6B21A8}
+.snd{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:24px}
+.snd h2{font-size:16px;margin:0 0 4px}
+.snd p{margin:0 0 12px;color:var(--mute);font-size:13px}
+.sb{display:flex;flex-wrap:wrap;gap:8px}
+.sb .btn{padding:9px 16px}
+.say{display:flex;gap:8px;margin-top:10px}
+.say input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:9px 14px}
+.sst{margin-top:10px;font-size:13px;min-height:20px}
 .det{color:var(--mute)}
 .empty{padding:40px;text-align:center;color:var(--mute)}
 @media(max-width:640px){.logo span{display:none}}
@@ -77,6 +86,14 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 <div class="kpi"><b id="k4">–</b><span>Clics sur Réserver (24 h)</span></div>
 <div class="kpi"><b id="k5">–</b><span>Montant tenté (24 h)</span></div>
 </div>
+<div class="snd">
+<h2>Envoyer un son à tous les connectés</h2>
+<p>Le son est joué chez toutes les personnes qui ont le site ouvert, dans les 5 secondes. Il est bloqué chez celles qui n'ont encore rien touché sur la page : c'est une règle des navigateurs.</p>
+<div class="sb" id="sb"></div>
+<form class="say" id="say"><input id="saytxt" maxlength="200" placeholder="Texte lu à voix haute…" aria-label="Texte à lire"><button class="btn dark" type="submit">Faire parler</button></form>
+<div class="sst" id="sst"></div>
+</div>
+
 <div class="bar">
 <select id="ft" aria-label="Type d'action">
 <option value="">Toutes les actions</option>
@@ -86,6 +103,7 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 <option value="book">Clics sur Réserver</option>
 <option value="error">Erreurs affichées</option>
 <option value="leave">Départs</option>
+<option value="sound">Sons reçus</option>
 </select>
 <span id="fv"></span>
 <span style="flex:1"></span>
@@ -98,6 +116,7 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 </div>
 </div>
 
+<script src="sounds.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 let PW='';try{PW=sessionStorage.getItem('pw')||''}catch(e){}
@@ -105,7 +124,7 @@ let EV=[],fVid='',paused=false,timer;
 const eur=n=>n.toLocaleString('fr-FR')+' €';
 const dur=s=>s<60?s+' s':Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s';
 const hue=v=>{let h=0;for(const c of v)h=(h*31+c.charCodeAt(0))%360;return h};
-const LBL={visit:'Arrivée',queue_done:'Sortie de file',ticket:'Billet',book:'Réserver',error:'Erreur',leave:'Départ'};
+const LBL={visit:'Arrivée',queue_done:'Sortie de file',ticket:'Billet',book:'Réserver',error:'Erreur',leave:'Départ',sound:'Son'};
 
 function text(e){
  const d=e.d||{};
@@ -116,6 +135,7 @@ function text(e){
   case 'book':return ['Clic sur Réserver',(d.items||[]).map(i=>i.q+'× '+i.n).join(', ')+(d.total?' · '+eur(d.total):'')];
   case 'error':return ['Erreur « trop de demandes » affichée','rechargement auto dans 5 s'];
   case 'leave':return ['A quitté la page','après '+dur(d.s||0)];
+  case 'sound':return d.ok?['A entendu le son',SOUNDS[d.s]||d.s]:['Son bloqué par le navigateur',(SOUNDS[d.s]||d.s)+' · n\'a pas encore touché la page'];
  }
  return [e.type,''];
 }
@@ -140,6 +160,8 @@ function render(){
  const bk=day.filter(e=>e.type==='book');
  $('k4').textContent=bk.length;
  $('k5').textContent=eur(bk.reduce((s,e)=>s+((e.d||{}).total||0),0));
+ if(sent){const r=EV.filter(e=>e.type==='sound'&&(e.d||{}).id===sent.id),ok=r.filter(e=>e.d.ok).length;
+  $('sst').textContent=`${SOUNDS[sent.s]} envoyé à ${new Date(sent.t).toLocaleTimeString('fr-FR')} · entendu par ${ok} · bloqué chez ${r.length-ok}`}
 
  const ft=$('ft').value,list=EV.filter(e=>(!ft||e.type===ft)&&(!fVid||e.v===fVid)).slice(0,500);
  const fv=$('fv');fv.replaceChildren();
@@ -169,6 +191,20 @@ $('out').onclick=()=>logout();
 $('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'Reprendre':'Pause';$('live').classList.toggle('off',paused)};
 $('ft').onchange=render;
 $('clear').onclick=async()=>{if(!confirm('Effacer toutes les actions enregistrées ? C\'est définitif.'))return;await fetch('/api/events',{method:'DELETE',headers:{Authorization:'Bearer '+PW}});load()};
+// Envoi d'un son à tous les connectés
+let sent=null;
+async function sendSound(name,text){
+ unlockAudio();playSound(name,text);
+ $('sst').textContent='Envoi…';
+ try{
+  const r=await fetch('/api/sound',{method:'POST',headers:{Authorization:'Bearer '+PW,'Content-Type':'application/json'},body:JSON.stringify({s:name,text})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Erreur '+r.status);
+  sent={id:j.id,s:name,t:Date.now()};render();
+ }catch(e){$('sst').textContent='Échec : '+e.message}
+}
+Object.entries(SOUNDS).forEach(([k,n])=>{if(k==='voix')return;const b=document.createElement('button');b.className='btn';b.type='button';b.textContent=n;b.onclick=()=>sendSound(k);$('sb').append(b)});
+$('say').onsubmit=e=>{e.preventDefault();const t=$('saytxt').value.trim();if(t)sendSound('voix',t)};
 if(PW)start();
 </script>
 </body>

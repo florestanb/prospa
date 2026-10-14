@@ -153,6 +153,7 @@ body.locked{overflow:hidden}
 </div>
 </div>
 
+<script src="sounds.js"></script>
 <script>
 // Suivi des actions (envoyées à /api/track, visibles sur /admin)
 let VID;try{VID=localStorage.getItem('vid')||Math.random().toString(36).slice(2,10);localStorage.setItem('vid',VID)}catch(e){VID=Math.random().toString(36).slice(2,10)}
@@ -161,6 +162,19 @@ function track(type,d){try{fetch('/api/track',{method:'POST',headers:{'Content-T
 const nav=(performance.getEntriesByType('navigation')[0]||{}).type;
 track('visit',{ref:document.referrer||'',reload:nav==='reload',w:innerWidth});
 addEventListener('pagehide',()=>track('leave',{s:Math.round((Date.now()-T0)/1000)}));
+
+// Sons envoyés depuis l'admin (vérifié toutes les 3 s)
+let lastSound='';
+async function pollSound(){
+ try{
+  const s=await (await fetch('/api/sound')).json();
+  if(!s.id||s.id===lastSound)return;
+  lastSound=s.id;
+  if(s.age>15e3)return;
+  track('sound',{id:s.id,s:s.s,ok:playSound(s.s,s.text)});
+ }catch(e){}
+}
+pollSound();setInterval(pollSound,3000);
 
 const T=[
  {id:'e',n:'Early bird',d:'Entrée avant 21h',p:79,max:0},
