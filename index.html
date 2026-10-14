@@ -73,6 +73,7 @@ body.locked{overflow:hidden}
 .bar{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--fg);border-radius:99px;transition:width 5s linear}
 .eta{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:10px;font-variant-numeric:tabular-nums}
+.join{width:100%;border:0;border-radius:999px;background:var(--fg);color:#fff;font:700 16px inherit;padding:15px 20px;cursor:pointer}
 .warn{margin-top:20px;font-size:12px;color:#B45309;font-weight:600}
 .dots::after{content:'';animation:dots 1.5s steps(4) infinite}
 @keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
@@ -91,8 +92,14 @@ body.locked{overflow:hidden}
 
 <div class="queue" id="queue" role="dialog" aria-modal="true" aria-labelledby="qh">
 <div class="logo">TOURTICKET</div>
-<div class="card">
-<h2 id="qh">Tu es dans la file d'attente</h2>
+<div class="card" id="qjoin">
+<h2 id="qh">Forte affluence</h2>
+<p>Une file d'attente est en place pour accéder à la billetterie. Rejoins-la pour réserver ta place.</p>
+<button class="join" id="qbtn" type="button">🔔 Rejoindre la file d'attente</button>
+<div class="pos-l" style="margin:12px 0 0">Le son sera activé pour te prévenir quand ce sera ton tour.</div>
+</div>
+<div class="card" id="qwait" hidden>
+<h2>Tu es dans la file d'attente</h2>
 <p>Forte affluence sur la billetterie. Tu accéderas au site dès que ce sera ton tour.</p>
 <div class="pos" id="qpos" aria-live="polite">—</div>
 <div class="pos-l">personnes devant toi</div>
@@ -204,15 +211,21 @@ function draw(){
 }
 
 // File d'attente : 2 min, mise à jour toutes les 5 s
-const QD=120e3,Q0=25,qs=Date.now();
+const QD=120e3,Q0=25;let qs,qt;
 const qtick=()=>{
  const f=Math.min(1,(Date.now()-qs)/QD);
  document.getElementById('qpos').textContent=Math.ceil(Q0*(1-f)).toLocaleString('fr-FR');
  document.getElementById('qbar').style.width=(f*100)+'%';
  document.getElementById('qeta').textContent=(r=>'≈ '+(r/60|0)+' min '+String(r%60).padStart(2,'0')+' s')(Math.ceil((1-f)*QD/1000));
- if(f>=1){clearInterval(qt);track('queue_done',{});const Q=document.getElementById('queue');Q.classList.add('bye');document.body.classList.remove('locked');setTimeout(()=>Q.remove(),400)}
+ if(f>=1){clearInterval(qt);track('queue_done',{});playSound('sonnette');const Q=document.getElementById('queue');Q.classList.add('bye');document.body.classList.remove('locked');setTimeout(()=>Q.remove(),400)}
 };
-const qt=setInterval(qtick,5e3);qtick();
+// Le clic sur « Rejoindre » débloque le son et lance la file
+document.getElementById('qbtn').onclick=()=>{
+ unlockAudio();const ok=playSound('bip');
+ track('queue_join',{sound:ok});
+ document.getElementById('qjoin').hidden=true;document.getElementById('qwait').hidden=false;
+ qs=Date.now();qt=setInterval(qtick,5e3);qtick();
+};
 
 // Réservation : chargement, puis erreur « trop de demandes » et rechargement
 document.getElementById('go').onclick=()=>{

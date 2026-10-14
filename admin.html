@@ -46,6 +46,7 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 .act{font-weight:600}
 .pill{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;margin-right:6px}
 .p-visit{background:var(--soft)}
+.p-queue_join{background:#E0F2FE;color:#075985}
 .p-queue_done{background:var(--okbg);color:var(--ok)}
 .p-ticket{background:#E0E7FF;color:#3730A3}
 .p-book{background:var(--warnbg);color:var(--warn)}
@@ -98,6 +99,7 @@ td.time{color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 <select id="ft" aria-label="Type d'action">
 <option value="">Toutes les actions</option>
 <option value="visit">Arrivées</option>
+<option value="queue_join">Entrées en file</option>
 <option value="queue_done">Sorties de file</option>
 <option value="ticket">Choix de billets</option>
 <option value="book">Clics sur Réserver</option>
@@ -124,12 +126,13 @@ let EV=[],fVid='',paused=false,timer;
 const eur=n=>n.toLocaleString('fr-FR')+' €';
 const dur=s=>s<60?s+' s':Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s';
 const hue=v=>{let h=0;for(const c of v)h=(h*31+c.charCodeAt(0))%360;return h};
-const LBL={visit:'Arrivée',queue_done:'Sortie de file',ticket:'Billet',book:'Réserver',error:'Erreur',leave:'Départ',sound:'Son'};
+const LBL={visit:'Arrivée',queue_join:'Entrée en file',queue_done:'Sortie de file',ticket:'Billet',book:'Réserver',error:'Erreur',leave:'Départ',sound:'Son'};
 
 function text(e){
  const d=e.d||{};
  switch(e.type){
   case 'visit':return [(d.reload?'Rechargement de la page':'Arrivée sur le site'),d.ref?'via '+(()=>{try{return new URL(d.ref).hostname}catch(x){return d.ref}})():'accès direct'];
+  case 'queue_join':return ['A rejoint la file d\'attente',d.sound?'son activé':'son non activé'];
   case 'queue_done':return ['Sortie de la file d\'attente','accès au site'];
   case 'ticket':return [(d.a>0?'+1 ':'−1 ')+(d.n||''),'quantité : '+d.q];
   case 'book':return ['Clic sur Réserver',(d.items||[]).map(i=>i.q+'× '+i.n).join(', ')+(d.total?' · '+eur(d.total):'')];
@@ -152,11 +155,11 @@ async function load(){
 function render(){
  const now=Date.now(),day=EV.filter(e=>now-e.t<864e5);
  // dernier état connu de chaque visiteur
- const last={};[...EV].reverse().forEach(e=>{const s=last[e.v]||(last[e.v]={});s.t=e.t;s.type=e.type;if(e.type==='visit'){s.visit=e.t;s.done=false}if(e.type==='queue_done')s.done=true});
+ const last={};[...EV].reverse().forEach(e=>{const s=last[e.v]||(last[e.v]={});s.t=e.t;s.type=e.type;if(e.type==='visit'){s.join=0;s.done=false}if(e.type==='queue_join')s.join=e.t;if(e.type==='queue_done')s.done=true});
  const on=Object.values(last).filter(s=>s.type!=='leave'&&now-s.t<5*60e3);
  $('k1').textContent=new Set(day.map(e=>e.v)).size;
  $('k2').textContent=on.length;
- $('k3').textContent=on.filter(s=>!s.done&&s.visit&&now-s.visit<150e3).length;
+ $('k3').textContent=on.filter(s=>!s.done&&s.join&&now-s.join<150e3).length;
  const bk=day.filter(e=>e.type==='book');
  $('k4').textContent=bk.length;
  $('k5').textContent=eur(bk.reduce((s,e)=>s+((e.d||{}).total||0),0));
