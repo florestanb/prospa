@@ -154,6 +154,14 @@ body.locked{overflow:hidden}
 </div>
 
 <script>
+// Suivi des actions (envoyées à /api/track, visibles sur /admin)
+let VID;try{VID=localStorage.getItem('vid')||Math.random().toString(36).slice(2,10);localStorage.setItem('vid',VID)}catch(e){VID=Math.random().toString(36).slice(2,10)}
+const T0=Date.now();
+function track(type,d){try{fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({v:VID,type,d}),keepalive:true}).catch(()=>{})}catch(e){}}
+const nav=(performance.getEntriesByType('navigation')[0]||{}).type;
+track('visit',{ref:document.referrer||'',reload:nav==='reload',w:innerWidth});
+addEventListener('pagehide',()=>track('leave',{s:Math.round((Date.now()-T0)/1000)}));
+
 const T=[
  {id:'e',n:'Early bird',d:'Entrée avant 21h',p:79,max:0},
  {id:'g',n:'Entrée générale',d:'Accès toute la soirée',p:99,max:6},
@@ -167,7 +175,7 @@ T.forEach(t=>{
  const r=document.createElement('div');r.className='t'+(t.max?'':' out');r.id='r'+t.id;
  r.innerHTML=`<div class="i"><b>${t.n}</b><div class="d">${t.d}</div><div class="p">${t.max?eur(t.p):'Épuisé'}</div>${t.left?`<div class="left">${t.left}</div>`:''}</div>`+
  (t.max?`<div class="st"><button type="button" data-a="-1" aria-label="Retirer">−</button><output id="o${t.id}">0</output><button type="button" data-a="1" aria-label="Ajouter">+</button></div>`:'');
- r.querySelectorAll('button').forEach(b=>b.onclick=()=>{q[t.id]=Math.max(0,Math.min(t.max,q[t.id]+ +b.dataset.a));draw()});
+ r.querySelectorAll('button').forEach(b=>b.onclick=()=>{const o=q[t.id];q[t.id]=Math.max(0,Math.min(t.max,q[t.id]+ +b.dataset.a));if(q[t.id]!==o)track('ticket',{n:t.n,q:q[t.id],a:+b.dataset.a});draw()});
  L.appendChild(r);
 });
 function draw(){
@@ -188,16 +196,18 @@ const qtick=()=>{
  document.getElementById('qpos').textContent=Math.ceil(Q0*(1-f)).toLocaleString('fr-FR');
  document.getElementById('qbar').style.width=(f*100)+'%';
  document.getElementById('qeta').textContent=(r=>'≈ '+(r/60|0)+' min '+String(r%60).padStart(2,'0')+' s')(Math.ceil((1-f)*QD/1000));
- if(f>=1){clearInterval(qt);const Q=document.getElementById('queue');Q.classList.add('bye');document.body.classList.remove('locked');setTimeout(()=>Q.remove(),400)}
+ if(f>=1){clearInterval(qt);track('queue_done',{});const Q=document.getElementById('queue');Q.classList.add('bye');document.body.classList.remove('locked');setTimeout(()=>Q.remove(),400)}
 };
 const qt=setInterval(qtick,5e3);qtick();
 
 // Réservation : chargement, puis erreur « trop de demandes » et rechargement
 document.getElementById('go').onclick=()=>{
+ const it=T.filter(t=>q[t.id]).map(t=>({n:t.n,q:q[t.id]}));
+ track('book',{items:it,total:T.reduce((s,t)=>s+q[t.id]*t.p,0)});
  const g=document.getElementById('go');g.disabled=true;document.querySelectorAll('.st button').forEach(b=>b.disabled=true);
  document.getElementById('gl').innerHTML='<span class="spin"></span>Réservation en cours…';document.getElementById('gt').textContent='';
  setTimeout(()=>{
-  document.getElementById('err').hidden=false;document.body.classList.add('locked');
+  document.getElementById('err').hidden=false;track('error',{});document.body.classList.add('locked');
   let c=5;const e=setInterval(()=>{c--;document.getElementById('ecd').textContent=c;if(c<=0){clearInterval(e);location.reload()}},1000);
  },2500+Math.random()*1500);
 };
