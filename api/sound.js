@@ -1,7 +1,7 @@
 // Son envoyé depuis l'admin : POST (admin) pour le déclencher, GET (site) pour le récupérer
 const { redis } = require('./_redis');
 
-const NAMES = ['bip', 'sonnette', 'klaxon', 'alarme', 'sirene', 'voix'];
+const NAMES = ['perso', 'bip', 'sonnette', 'klaxon', 'alarme', 'sirene', 'voix'];
 
 module.exports = async (req, res) => {
   try {

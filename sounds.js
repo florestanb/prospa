@@ -1,5 +1,14 @@
 // Sons générés par le navigateur (partagés entre le site et l'admin)
-const SOUNDS = { bip: 'Bip', sonnette: 'Sonnette', klaxon: 'Klaxon', alarme: 'Alarme', sirene: 'Sirène', voix: 'Voix' };
+const SOUNDS = { perso: 'Mon son', bip: 'Bip', sonnette: 'Sonnette', klaxon: 'Klaxon', alarme: 'Alarme', sirene: 'Sirène', voix: 'Voix' };
+
+// Fichiers audio : téléchargés dès l'ouverture de la page, décodés au premier son
+const FILES = { perso: '/photos/sound.mp3' };
+const fileData = {}, fileBuf = {};
+for (const k in FILES) fileData[k] = fetch(FILES[k]).then(r => r.arrayBuffer()).catch(() => null);
+async function playFile(c, k) {
+  if (!fileBuf[k]) { const d = await fileData[k]; if (!d) return; fileBuf[k] = await c.decodeAudioData(d.slice(0)); }
+  const src = c.createBufferSource(); src.buffer = fileBuf[k]; src.connect(c.destination); src.start();
+}
 
 let AC;
 function audioCtx() {
@@ -39,6 +48,8 @@ function playSound(name, text) {
       for (let i = 0; i < 8; i++) tone(c, 'square', i % 2 ? 700 : 1000, t + i * 0.2, 0.18, 0.12); break;
     case 'sirene':
       for (let i = 0; i < 3; i++) { tone(c, 'triangle', 600, t + i * 1.2, 0.6, 0.3, 1200); tone(c, 'triangle', 1200, t + i * 1.2 + 0.6, 0.6, 0.3, 600); } break;
+    case 'perso':
+      playFile(c, name).catch(() => {}); break;
     case 'voix':
       if (!window.speechSynthesis || !text) return false;
       const u = new SpeechSynthesisUtterance(text); u.lang = 'fr-FR';
