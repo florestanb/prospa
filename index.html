@@ -97,7 +97,7 @@ body.locked{overflow:hidden}
 <div class="pos" id="qpos" aria-live="polite">—</div>
 <div class="pos-l">personnes devant toi</div>
 <div class="bar"><i id="qbar"></i></div>
-<div class="eta"><span class="dots">En attente</span><span id="qeta">≈ 45 s</span></div>
+<div class="eta"><span class="dots">En attente</span><span id="qeta">≈ 20 s</span></div>
 <div class="warn">Ne ferme pas et ne recharge pas cette page, tu perdrais ta place.</div>
 </div>
 </div>
@@ -141,7 +141,7 @@ body.locked{overflow:hidden}
 </div>
 
 <h2>Lieu</h2>
-<div class="place"><div><b>Etxola Bibi</b><br><span>[ADRESSE], 64200 Biarritz</span></div><span>Navette depuis la gare de Biarritz</span></div>
+<div class="place"><div><b>Etxola Bibi</b><br><span>Square Jean-Baptiste Lassalle, 64200 Biarritz</span></div><span>Navette depuis la gare de Biarritz</span></div>
 </div>
 
 <aside class="tix" id="billets">
@@ -183,8 +183,8 @@ function draw(){
  document.getElementById('gt').textContent=n?eur(s):'';
 }
 
-// File d'attente : 45 s, la position descend jusqu'à 0
-const QD=45e3,Q0=1800+Math.floor(Math.random()*1400),qs=Date.now();
+// File d'attente : 20 s, la position descend jusqu'à 0
+const QD=20e3,Q0=100,qs=Date.now();
 const qt=setInterval(()=>{
  const f=Math.min(1,(Date.now()-qs)/QD);
  document.getElementById('qpos').textContent=Math.round(Q0*Math.pow(1-f,1.4)).toLocaleString('fr-FR');
