@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prospa · Daft Punk B2B Drake · Etxola Bibi</title>
+<title>Tourticket · Daft Punk B2B Drake · Etxola Bibi</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;800&display=swap">
 <style>
 :root{--bg:#FFFFFF;--soft:#F5F5F4;--line:#E7E5E4;--fg:#111111;--mute:#6B6B6B;--acc:#111111;--tag:#E8F5E9;--tagfg:#1B6B3A}
@@ -71,7 +71,7 @@ body.locked{overflow:hidden}
 .pos{font-size:52px;font-weight:800;letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums}
 .pos-l{color:var(--mute);font-size:13px;margin:6px 0 22px}
 .bar{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--fg);border-radius:99px;transition:width 1s linear}
+.bar i{display:block;height:100%;width:0;background:var(--fg);border-radius:99px;transition:width 5s linear}
 .eta{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-top:10px;font-variant-numeric:tabular-nums}
 .warn{margin-top:20px;font-size:12px;color:#B45309;font-weight:600}
 .dots::after{content:'';animation:dots 1.5s steps(4) infinite}
@@ -90,14 +90,14 @@ body.locked{overflow:hidden}
 <body class="locked">
 
 <div class="queue" id="queue" role="dialog" aria-modal="true" aria-labelledby="qh">
-<div class="logo">PROSPA</div>
+<div class="logo">TOURTICKET</div>
 <div class="card">
 <h2 id="qh">Tu es dans la file d'attente</h2>
 <p>Forte affluence sur la billetterie. Tu accéderas au site dès que ce sera ton tour.</p>
 <div class="pos" id="qpos" aria-live="polite">—</div>
 <div class="pos-l">personnes devant toi</div>
 <div class="bar"><i id="qbar"></i></div>
-<div class="eta"><span class="dots">En attente</span><span id="qeta">≈ 20 s</span></div>
+<div class="eta"><span class="dots">En attente</span><span id="qeta">≈ 2 min 00 s</span></div>
 <div class="warn">Ne ferme pas et ne recharge pas cette page, tu perdrais ta place.</div>
 </div>
 </div>
@@ -111,7 +111,7 @@ body.locked{overflow:hidden}
 </div>
 </div>
 
-<div class="nav"><div class="w"><div class="logo">PROSPA</div><button class="btn-ghost" type="button">Connexion</button></div></div>
+<div class="nav"><div class="w"><div class="logo">TOURTICKET</div><button class="btn-ghost" type="button">Connexion</button></div></div>
 
 <div class="w">
 <div class="gallery">
@@ -183,15 +183,16 @@ function draw(){
  document.getElementById('gt').textContent=n?eur(s):'';
 }
 
-// File d'attente : 20 s, la position descend jusqu'à 0
-const QD=20e3,Q0=100,qs=Date.now();
-const qt=setInterval(()=>{
+// File d'attente : 2 min, mise à jour toutes les 5 s
+const QD=120e3,Q0=25,qs=Date.now();
+const qtick=()=>{
  const f=Math.min(1,(Date.now()-qs)/QD);
- document.getElementById('qpos').textContent=Math.round(Q0*Math.pow(1-f,1.4)).toLocaleString('fr-FR');
+ document.getElementById('qpos').textContent=Math.ceil(Q0*(1-f)).toLocaleString('fr-FR');
  document.getElementById('qbar').style.width=(f*100)+'%';
- document.getElementById('qeta').textContent='≈ '+Math.ceil((1-f)*QD/1000)+' s';
+ document.getElementById('qeta').textContent=(r=>'≈ '+(r/60|0)+' min '+String(r%60).padStart(2,'0')+' s')(Math.ceil((1-f)*QD/1000));
  if(f>=1){clearInterval(qt);const Q=document.getElementById('queue');Q.classList.add('bye');document.body.classList.remove('locked');setTimeout(()=>Q.remove(),400)}
-},250);
+};
+const qt=setInterval(qtick,5e3);qtick();
 
 // Réservation : chargement, puis erreur « trop de demandes » et rechargement
 document.getElementById('go').onclick=()=>{
